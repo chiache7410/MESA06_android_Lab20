@@ -3,7 +3,13 @@ package tw.org.iii.lab20;
 import android.Manifest;
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.ContentResolver;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -12,23 +18,32 @@ import android.os.Bundle;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+import android.widget.ImageView;
 
 public class MainActivity extends AppCompatActivity {
     private TelephonyManager tmgr;
     private AccountManager amgr;
+    private ContentResolver contentResolver;
+    private ImageView img;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        img = (ImageView)findViewById(R.id.img);
+        contentResolver = getContentResolver();
         if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.GET_ACCOUNTS)
+                Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.READ_PHONE_STATE,
-                            Manifest.permission.GET_ACCOUNTS},
+                            Manifest.permission.GET_ACCOUNTS,
+                            Manifest.permission.READ_CONTACTS,
+                            Manifest.permission.READ_EXTERNAL_STORAGE},
                     123);
         }else{
-            init();
+            //init();
+            //getContact();
+            getPhoto();
         }
     }
     private void init(){
@@ -41,6 +56,30 @@ public class MainActivity extends AppCompatActivity {
         for (Account a : as) {
             Log.v("brad", a.name + ":" + a.type );
         }
+    }
+    private void getContact() {
+        String[] projection = {ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER};
+        Cursor cursor = contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection, null, null, null);
+        Log.v("brad", "count: " + cursor.getCount());
+        while (cursor.moveToNext()) {
+            String name = cursor.getString(0);
+            String tel = cursor.getString(1);
+            Log.v("brad", name + ":" + tel);
+        }
+    }
+    private void getPhoto() {
+        Cursor cursor = contentResolver.query(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                null, null, null, null);
+        Log.v("brad", "photo: " + cursor.getCount());
+        cursor.moveToLast();
+        String data = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
+        Log.v("brad", "photo: " + data);
+        Bitmap photo = BitmapFactory.decodeFile(data);
+        img.setImageBitmap(photo);
     }
     private class MyPhoneStateListener extends PhoneStateListener {
         @Override
